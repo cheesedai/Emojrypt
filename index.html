@@ -3,45 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SecretMoji - Encrypt with Emoji</title>
+    <title>Emojrypt - Encrypt with Emoji</title>
 
-    <!-- React -->
-    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    
-    <!-- TailwindCSS -->
+    <!-- CSS and Fonts -->
     <script src="https://cdn.tailwindcss.com"></script>
-
-    <!-- CryptoJS (for AES Encryption) -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
-
-    <!-- Sonner (for nice notifications) -->
-    <script src="https://cdn.jsdelivr.net/npm/sonner@1.4.41/dist/index.min.js"></script>
+    <link href="https://rsms.me/inter/inter.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/sonner@1.4.41/dist/index.min.css" rel="stylesheet">
-    
-    <!-- Supabase Client -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <style>
-        @import url('https://rsms.me/inter/inter.css');
         html { font-family: 'Inter', sans-serif; }
-        body {
-            background-color: #f0f2f5;
-            -webkit-font-smoothing: antialiased;
-            -moz-osx-font-smoothing: grayscale;
-        }
-        .main-gradient {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        }
-        .card {
-            background: rgba(255, 255, 255, 0.9);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }
-        textarea:focus, input:focus {
-            box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.5);
-            border-color: #667eea;
-        }
+        body { background-color: #f0f2f5; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+        .main-gradient { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .card { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.2); }
+        textarea:focus, input:focus { box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.5); border-color: #667eea; }
         textarea::-webkit-scrollbar { display: none; }
         textarea { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
@@ -49,136 +23,115 @@
 <body>
     <div id="root"></div>
 
-    <script type="module">
-        const { useState, useEffect, createElement: e } = React;
-        const { Toaster, toast } = Sonner;
+    <!-- JavaScript Libraries -->
+    <!-- These MUST be loaded before our app's code -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sonner@1.4.41/dist/index.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <!-- OUR APPLICATION CODE - CLASSIC SCRIPT TAG -->
+    <!-- Notice there is NO type="module" here. This is the fix. -->
+    <script>
+        // Use a self-executing anonymous function to avoid polluting the global scope
+        (function() {
+            const { useState, useEffect, createElement: e } = React;
+            const { Toaster, toast } = Sonner;
 
-        // --- Supabase Client Initialization ---
-        // I have put your keys here. This is safe for a public 'anon' key.
-        const supabaseUrl = 'https://cwqykrfdqmntcxdavunl.supabase.co';
-        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN3cXlrcmZkcW1udGN4ZGF2dW5sIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTIwMzE5NzAsImV4cCI6MjA2NzYwNzk3MH0.cgdIS0v6GsCyXw4gLEPqG5rt3TtdQCgGqB3TPrhKv-4';
-        const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+            // --- Supabase Client Initialization ---
+            const supabaseUrl = 'https://cwqykrfdqmntcxdavunl.supabase.co';
+            const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN3cXlrcmZkcW1udGN4ZGF2dW5sIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTIwMzE5NzAsImV4cCI6MjA2NzYwNzk3MH0.cgdIS0v6GsCyXw4gLEPqG5rt3TtdQCgGqB3TPrhKv-4';
+            // We need to access the global 'supabase' object from the library
+            const supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
 
-
-        // --- Core Cryptography & Encoding Logic (No changes here) ---
-        const DEFAULT_KEY = "🤫🔑🔓SecretMojiDefaultKey!2024";
-        const EMOJI_CHARSET = ['😂', '❤️', '😍', '😊', '😭', '🤔', '🔥', '✨', '🎉', '💯', '👍', '🙏', '🙄', '😮', '😴', '👋', '💰', '✅', '❌', '🚀', '🌟', '💡', '💀', '💩', '👻', '👽', '🤖', '👾', '🧑', '‍💻', '📈', '📉', '🔒', '🔓', '🔑', '🤫', '🎉', '🎂', '🎁', '🎈', '🎊', '💍', '💎', '👑', '🎩', '👠', '💄', '💅', '🧠', '👀', '🗣️', '👣', '🌍', '🌞', '🌙', '⭐', '🌈', '🌊', '🌳', '🌺', '🍎', '🍓', '🍕', '🍔', '🍟', '🍿', '🍩', '🍺', '🍷', '🍹', '🚗', '✈️', '⛵', '🚲', '🏠', '🏰', '🗽', '🗼', '🗿', '📱', '💻', '⌚', '📷', '📺', '🎤', '🎧', '🎵', '🕹️', '🎨', '🎯', '🏀', '⚽', '⚾', '🎱', '🥇', '🥈', '🥉', '🏆', '🏳️', '‍🌈', '🏁', '🛑', '⛔', '🚫', '🌀', '💤', '💢', '💣', '💥', '💦', '💨', '💫', '🕳️', '🐵', '🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼', '🐨', '🐯', '🦁', '🐮', '🐷', '🐸', '🐙', '🦋', '🐞', '🐟', '🐢', '🐍', '🦄', '🐲', '🌵', '🎄', '🍁', '🍄', '🌍', '🌎', '🌏', '🌋', '🗻', '🏕️', '🏖️', '🏜️', '🏝️', '🏞️', '🏟️', '🏛️', '🏗️', '🏘️', '🏚️', '🏢', '🏤', '🏥', '🏦', '🏨', '🏫', '🏪', '🏭', '🏯', '💒', '⛲', '⛺', '🌁', '🌃', '🏙️', '🌄', '🌅', '🌆', '🌉', '♨️', '🎠', '🎡', '🎢', '🎪', '🚂', '🚃', '🚄', '🚅', '🚆', '🚇', '🚈', '🚉', '🚊', 'Tram', '🚌', '🚍', '🚙', '🚘', '🚚', '🚛', '🚜', '🏎️', '🏍️', '🛵', '🛺', '🚔', '🚍', '🚑', '🚒', '🚓', '🚕', '🚖', '🚗', '🚚', '🚲', '🛴', '🛹', '🛼', '🚏', '🛣️', '🛤️', '🛢️', '⛽', '🚨', '🚥', '🚦', '🚧', '⚓', '⛵', '🛶', '🚤', '🛳️', '⛴️', '🛥️', '🚢', '✈️', '🛩️', '🛫', '🛬', '🪂', '🛰️', '🚀', '🛸', '🚁', '🚟', '🚠', '🚡', '🪑', '🚪', '🛗', '🪞', '🪟', '🛏️', '🛋️', '🚽', '🪠', '🚿', '🛁', '🧼', '🪥', '🪒', '🧴', '🧷', '🧹', '🧺', '🧻', '📦', '📫', '📮', '📤', '📥', '📜', '📃', '📄', '📅', '📆', '🗓️', '🖇️', '📎', '📐', '📏', '📌', '📍', '✂️', '🖊️', '🖋️', '✒️', '🖌️', '🖍️', '📝', '✏️', '🔍', '🔎', '📢', '📣', '📡', '🔔', '🔕', '⌛', '⏳', '⌚', '⏰', '⏱️', '⏲️', '🕰️', '🌡️', '⚖️', '🔗', '⛓️', '🧰', '🔧', '🔨', '⚒️', '⛏️', '🔩', '⚙️', '🧱', '🪜', '🛡️', '⚔️', '🔫', '🏹', '🪄', '🔮', '🧿', '🧪', '🧫', '🧬', '🔬', '🔭', '⚗️', '🩸', '💊', '💉', '🩹', '🩺', '🏷️', '🔖', '💴', '💵', '💶', '💷', '🪙', '💳', '🧾', '✉️', '📧', '📨', '💌', '📮', '🗳️', '🖋️', '📁', '📂', '🗂️', '🗞️', '📰', '📈', '📉', '📊', '📋', '📌', '📎', '🧮', '🏧', '🚮', '♿', '🚭', '🚰', '🚻', '🚮', '⚠️', '🚸', '⛔', '🚫', '🚳', '🚱', '🚷', '📵', '🔞', '☢️', '☣️', '⬆️', '↗️', '➡️', '↘️', '⬇️', '↙️', '⬅️', '↖️', '↕️', '↔️', '↩️', '↪️', '⤴️', '⤵️', '🔃', '🔄', '🔙', '🔚', '🔛', '🔜', '🔝', '🛐', '⚛️', '🕉️', '✡️', '☸️', '☯️', '✝️', '☦️', '☪️', '☮️', '🕎', '🔯', '♈', '♉', '♊', '♋', '♌', '♍', '♎', '♏', '♐', '♑', '♒', '♓', '⛎', '🔀', '🔁', '🔂', '▶️', '⏩', '⏭️', '⏯️', '◀️', '⏪', '⏮️', '🔼', '⏫', '🔽', '⏬', '⏸️', '⏹️', '⏺️', '⏏️', '🎦', '🔅', '🔆', '📶', '📳', '📴', '⚕️', '♾️', '♻️', '⚜️', '🔱', '📛', '🔰', '⭕', '✅', '☑️', '✔️', '✖️', '❌', '❎', '➕', '➖', '➗', '✖️', '❗', '❓', '❕', '❔', '©️', '®️', '™️', '#️⃣', '*️⃣', '0️⃣', '1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟', '🔠', '🔡', '🔢', '🔣', '🔤', '🅰️', '🆎', '🅱️', '🆑', '🆒', '🆓', 'ℹ️', '🆔', 'Ⓜ️', '🆕', '🆖', '🅾️', '🆗', '🅿️', '🆘', '🆙', '🆚', '🈁', '🈂️', '🈷️', '🈶', '🈯', '🉐', '🈹', '🈚', '🈲', '🉑', '🈸', '🈴', '🈳', '㊗️', '㊙️', '🈺', '🈵', '🔴', '🟠', '🟡', '🟢', '🔵', '🟣', '🟤', '⚫', '⚪', '🟥', '🟧', '🟨', '🟩', '🟦', '🟪', '🟫', '⬛', '⬜', '🔶', '🔷', '🔸', '🔹', '🔺', '🔻', '🔳', '🔲', '▪️', '▫️', '◾', '◽', '◼️', '◻️', '💭', '🗯️', '💬', '🗨️', '👁️‍🗨️'];
-        const BASE = EMOJI_CHARSET.length;
-        const EMOJI_MAP = new Map(EMOJI_CHARSET.map((emoji, i) => [i, emoji]));
-        const REVERSE_EMOJI_MAP = new Map(EMOJI_CHARSET.map((emoji, i) => [emoji, i]));
-
-        const encryptText = (text, key) => { /* ... same as before ... */ 
-            try { const encrypted = CryptoJS.AES.encrypt(text, key); const bytes = []; for (let i = 0; i < encrypted.ciphertext.words.length; i++) { const word = encrypted.ciphertext.words[i]; bytes.push((word >> 24) & 0xff); bytes.push((word >> 16) & 0xff); bytes.push((word >> 8) & 0xff); bytes.push(word & 0xff); } const actualBytes = bytes.slice(0, encrypted.ciphertext.sigBytes); return bytesToBaseEmoji(actualBytes); } catch (e) { console.error("Encryption failed:", e); return null; } };
-        const decryptText = (emojiString, key) => { /* ... same as before ... */
-            try { const bytes = baseEmojiToBytes(emojiString); const words = []; for(let i = 0; i < bytes.length; i += 4) { words.push( (bytes[i] << 24) | (bytes[i+1] << 16) | (bytes[i+2] << 8) | (bytes[i+3]) ); } const cipherParams = CryptoJS.lib.CipherParams.create({ ciphertext: CryptoJS.lib.WordArray.create(words, bytes.length) }); const decrypted = CryptoJS.AES.decrypt(cipherParams, key); return decrypted.toString(CryptoJS.enc.Utf8); } catch (e) { console.error("Decryption failed:", e); return null; } };
-        function bytesToBaseEmoji(bytes) { /* ... same as before ... */
-            if (bytes.length === 0) return ''; let num = BigInt(0); for(let i=0; i<bytes.length; i++) { num = (num << BigInt(8)) + BigInt(bytes[i]); } let result = ''; if (num === BigInt(0)) return EMOJI_MAP.get(0); while (num > 0) { const remainder = num % BigInt(BASE); result = EMOJI_MAP.get(Number(remainder)) + result; num = num / BigInt(BASE); } return result; }
-        function baseEmojiToBytes(emojiStr) { /* ... same as before ... */
-            let num = BigInt(0); const emojiArray = [...emojiStr]; for(const emoji of emojiArray) { const val = REVERSE_EMOJI_MAP.get(emoji); if(val === undefined) throw new Error(`Invalid character in input: ${emoji}`); num = (num * BigInt(BASE)) + BigInt(val); } let hex = num.toString(16); if (hex.length % 2) { hex = '0' + hex; } const bytes = []; for (let i = 0; i < hex.length; i += 2) { bytes.push(parseInt(hex.substr(i, 2), 16)); } return bytes; }
-
-
-        // --- React Components ---
-        const App = () => {
-            const [mode, setMode] = useState('encrypt');
-            const [input, setInput] = useState('');
-            const [output, setOutput] = useState('');
-            const [customKey, setCustomKey] = useState('');
-            const [user, setUser] = useState(null); // Will hold user data if logged in
-            const [isSubscribed, setIsSubscribed] = useState(false); // To be replaced by real subscription check later
-
-            // Check user session on load
-            useEffect(() => {
-                const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-                    setUser(session?.user ?? null);
-                    if (session?.user) {
-                        toast.success(`Welcome back, ${session.user.email}!`);
-                        // TODO: Here you would check your database to see if this user is subscribed.
-                        // For now, let's just pretend logged-in users are subscribed for the demo.
-                        setIsSubscribed(true);
-                    } else {
-                        setIsSubscribed(false);
-                    }
-                });
-                return () => subscription.unsubscribe();
-            }, []);
-
-            async function signInWithGoogle() {
-                const { error } = await supabase.auth.signInWithOAuth({
-                    provider: 'google',
-                });
-                if(error) toast.error(error.message);
-            }
-
-            async function signOut() {
-                await supabase.auth.signOut();
-                setUser(null);
-                toast.info("You have been signed out.");
-            }
+            // --- Core Cryptography & Encoding Logic ---
+            const DEFAULT_KEY = "🤫🔑🔓EmojryptDefaultKey!2024"; // Updated with new project name
+            const EMOJI_CHARSET = ['😂', '❤️', '😍', '😊', '😭', '🤔', '🔥', '✨', '🎉', '💯', '👍', '🙏', '🙄', '😮', '😴', '👋', '💰', '✅', '❌', '🚀', '🌟', '💡', '💀', '💩', '👻', '👽', '🤖', '👾', '🧑', '‍💻', '📈', '📉', '🔒', '🔓', '🔑', '🤫', '🎉', '🎂', '🎁', '🎈', '🎊', '💍', '💎', '👑', '🎩', '👠', '💄', '💅', '🧠', '👀', '🗣️', '👣', '🌍', '🌞', '🌙', '⭐', '🌈', '🌊', '🌳', '🌺', '🍎', '🍓', '🍕', '🍔', '🍟', '🍿', '🍩', '🍺', '🍷', '🍹', '🚗', '✈️', '⛵', '🚲', '🏠', '🏰', '🗽', '🗼', '🗿', '📱', '💻', '⌚', '📷', '📺', '🎤', '🎧', '🎵', '🕹️', '🎨', '🎯', '🏀', '⚽', '⚾', '🎱', '🥇', '🥈', '🥉', '🏆', '🏳️', '‍🌈', '🏁', '🛑', '⛔', '🚫', '🌀', '💤', '💢', '💣', '💥', '💦', '💨', '💫', '🕳️', '🐵', '🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼', '🐨', '🐯', '🦁', '🐮', '🐷', '🐸', '🐙', '🦋', '🐞', '🐟', '🐢', '🐍', '🦄', '🐲', '🌵', '🎄', '🍁', '🍄', '🌍', '🌎', '🌏', '🌋', '🗻', '🏕️', '🏖️', '🏜️', '🏝️', '🏞️', '🏟️', '🏛️', '🏗️', '🏘️', '🏚️', '🏢', '🏤', '🏥', '🏦', '🏨', '🏫', '🏪', '🏭', '🏯', '💒', '⛲', '⛺', '🌁', '🌃', '🏙️', '🌄', '🌅', '🌆', '🌉', '♨️', '🎠', '🎡', '🎢', '🎪', '🚂', '🚃', '🚄', '🚅', '🚆', '🚇', '🚈', '🚉', '🚊', 'Tram', '🚌', '🚍', '🚙', '🚘', '🚚', '🚛', '🚜', '🏎️', '🏍️', '🛵', '🛺', '🚔', '🚍', '🚑', '🚒', '🚓', '🚕', '🚖', '🚗', '🚚', '🚲', '🛴', '🛹', '🛼', '🚏', '🛣️', '🛤️', '🛢️', '⛽', '🚨', '🚥', '🚦', '🚧', '⚓', '⛵', '🛶', '🚤', '🛳️', '⛴️', '🛥️', '🚢', '✈️', '🛩️', '🛫', '🛬', '🪂', '🛰️', '🚀', '🛸', '🚁', '🚟', '🚠', '🚡', '🪑', '🚪', '🛗', '🪞', '🪟', '🛏️', '🛋️', '🚽', '🪠', '🚿', '🛁', '🧼', '🪥', '🪒', '🧴', '🧷', '🧹', '🧺', '🧻', '📦', '📫', '📮', '📤', '📥', '📜', '📃', '📄', '📅', '📆', '🗓️', '🖇️', '📎', '📐', '📏', '📌', '📍', '✂️', '🖊️', '🖋️', '✒️', '🖌️', '🖍️', '📝', '✏️', '🔍', '🔎', '📢', '📣', '📡', '🔔', '🔕', '⌛', '⏳', '⌚', '⏰', '⏱️', '⏲️', '🕰️', '🌡️', '⚖️', '🔗', '⛓️', '🧰', '🔧', '🔨', '⚒️', '⛏️', '🔩', '⚙️', '🧱', '🪜', '🛡️', '⚔️', '🔫', '🏹', '🪄', '🔮', '🧿', '🧪', '🧫', '🧬', '🔬', '🔭', '⚗️', '🩸', '💊', '💉', '🩹', '🩺', '🏷️', '🔖', '💴', '💵', '💶', '💷', '🪙', '💳', '🧾', '✉️', '📧', '📨', '💌', '📮', '🗳️', '🖋️', '📁', '📂', '🗂️', '🗞️', '📰', '📈', '📉', '📊', '📋', '📌', '📎', '🧮', '🏧', '🚮', '♿', '🚭', '🚰', '🚻', '🚮', '⚠️', '🚸', '⛔', '🚫', '🚳', '🚱', '🚷', '📵', '🔞', '☢️', '☣️', '⬆️', '↗️', '➡️', '↘️', '⬇️', '↙️', '⬅️', '↖️', '↕️', '↔️', '↩️', '↪️', '⤴️', '⤵️', '🔃', '🔄', '🔙', '🔚', '🔛', '🔜', '🔝', '🛐', '⚛️', '🕉️', '✡️', '☸️', '☯️', '✝️', '☦️', '☪️', '☮️', '🕎', '🔯', '♈', '♉', '♊', '♋', '♌', '♍', '♎', '♏', '♐', '♑', '♒', '♓', '⛎', '🔀', '🔁', '🔂', '▶️', '⏩', '⏭️', '⏯️', '◀️', '⏪', '⏮️', '🔼', '⏫', '🔽', '⏬', '⏸️', '⏹️', '⏺️', '⏏️', '🎦', '🔅', '🔆', '📶', '📳', '📴', '⚕️', '♾️', '♻️', '⚜️', '🔱', '📛', '🔰', '⭕', '✅', '☑️', '✔️', '✖️', '❌', '❎', '➕', '➖', '➗', '✖️', '❗', '❓', '❕', '❔', '©️', '®️', '™️', '#️⃣', '*️⃣', '0️⃣', '1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟', '🔠', '🔡', '🔢', '🔣', '🔤', '🅰️', '🆎', '🅱️', '🆑', '🆒', '🆓', 'ℹ️', '🆔', 'Ⓜ️', '🆕', '🆖', '🅾️', '🆗', '🅿️', '🆘', '🆙', '🆚', '🈁', '🈂️', '🈷️', '🈶', '🈯', '🉐', '🈹', '🈚', '🈲', '🉑', '🈸', '🈴', '🈳', '㊗️', '㊙️', '🈺', '🈵', '🔴', '🟠', '🟡', '🟢', '🔵', '🟣', '🟤', '⚫', '⚪', '🟥', '🟧', '🟨', '🟩', '🟦', '🟪', '🟫', '⬛', '⬜', '🔶', '🔷', '🔸', '🔹', '🔺', '🔻', '🔳', '🔲', '▪️', '▫️', '◾', '◽', '◼️', '◻️', '💭', '🗯️', '💬', '🗨️', '👁️‍🗨️'];
+            const BASE = EMOJI_CHARSET.length;
+            const EMOJI_MAP = new Map(EMOJI_CHARSET.map((emoji, i) => [i, emoji]));
+            const REVERSE_EMOJI_MAP = new Map(EMOJI_CHARSET.map((emoji, i) => [emoji, i]));
+            const encryptText = (text, key) => { try { const encrypted = CryptoJS.AES.encrypt(text, key); const bytes = []; for (let i = 0; i < encrypted.ciphertext.words.length; i++) { const word = encrypted.ciphertext.words[i]; bytes.push((word >> 24) & 0xff); bytes.push((word >> 16) & 0xff); bytes.push((word >> 8) & 0xff); bytes.push(word & 0xff); } const actualBytes = bytes.slice(0, encrypted.ciphertext.sigBytes); return bytesToBaseEmoji(actualBytes); } catch (e) { console.error("Encryption failed:", e); return null; } };
+            const decryptText = (emojiString, key) => { try { const bytes = baseEmojiToBytes(emojiString); const words = []; for(let i = 0; i < bytes.length; i += 4) { words.push( (bytes[i] << 24) | (bytes[i+1] << 16) | (bytes[i+2] << 8) | (bytes[i+3]) ); } const cipherParams = CryptoJS.lib.CipherParams.create({ ciphertext: CryptoJS.lib.WordArray.create(words, bytes.length) }); const decrypted = CryptoJS.AES.decrypt(cipherParams, key); return decrypted.toString(CryptoJS.enc.Utf8); } catch (e) { console.error("Decryption failed:", e); return null; } };
+            function bytesToBaseEmoji(bytes) { if (bytes.length === 0) return ''; let num = BigInt(0); for(let i=0; i<bytes.length; i++) { num = (num << BigInt(8)) + BigInt(bytes[i]); } let result = ''; if (num === BigInt(0)) return EMOJI_MAP.get(0); while (num > 0) { const remainder = num % BigInt(BASE); result = EMOJI_MAP.get(Number(remainder)) + result; num = num / BigInt(BASE); } return result; }
+            function baseEmojiToBytes(emojiStr) { let num = BigInt(0); const emojiArray = [...emojiStr]; for(const emoji of emojiArray) { const val = REVERSE_EMOJI_MAP.get(emoji); if(val === undefined) throw new Error(`Invalid character in input: ${emoji}`); num = (num * BigInt(BASE)) + BigInt(val); } let hex = num.toString(16); if (hex.length % 2) { hex = '0' + hex; } const bytes = []; for (let i = 0; i < hex.length; i += 2) { bytes.push(parseInt(hex.substr(i, 2), 16)); } return bytes; }
             
-            const handleAction = () => {
-                // Key logic is now: if a user is subscribed AND they entered a custom key, use it. Otherwise, use default.
-                const keyToUse = isSubscribed && customKey.trim() !== '' ? customKey.trim() : DEFAULT_KEY;
-                if (!input) return;
+            // --- The Main React Component for our App ---
+            function App() {
+                const [mode, setMode] = useState('encrypt');
+                const [input, setInput] = useState('');
+                const [output, setOutput] = useState('');
+                const [customKey, setCustomKey] = useState('');
+                const [user, setUser] = useState(null); 
+                const [isSubscribed, setIsSubscribed] = useState(false);
 
-                if (mode === 'encrypt') {
-                    const encrypted = encryptText(input, keyToUse);
-                    setOutput(encrypted);
-                    if (encrypted !== null) toast.success("Encryption complete!"); else toast.error("Encryption failed.");
-                } else {
-                    const decrypted = decryptText(input, keyToUse);
-                    setOutput(decrypted);
-                    if (decrypted) toast.success("Decryption successful!"); else toast.error("Decryption failed. Invalid key or message.");
+                useEffect(() => {
+                    const checkUserAndHandleAuth = async () => {
+                        // Check initial user session on load
+                        const { data: { user } } = await supabaseClient.auth.getUser();
+                        setUser(user);
+                        if (user) { setIsSubscribed(true); } // Demo: logged-in = subscribed
+
+                        // Listen for auth state changes (login, logout)
+                        const { data: { subscription } } = supabaseClient.auth.onAuthStateChange((_event, session) => {
+                            setUser(session?.user ?? null);
+                            if (session?.user) {
+                                toast.success(`Welcome, ${session.user.user_metadata?.full_name || session.user.email}!`);
+                                setIsSubscribed(true); // Demo: logged-in = subscribed
+                            } else {
+                                setIsSubscribed(false);
+                            }
+                        });
+
+                        return () => {
+                            if (subscription) {
+                                subscription.unsubscribe();
+                            }
+                        };
+                    };
+                    checkUserAndHandleAuth();
+                }, []);
+                
+                async function signInWithGoogle() {
+                    const { error } = await supabaseClient.auth.signInWithOAuth({
+                        provider: 'google',
+                        options: {
+                            redirectTo: window.location.href // Important for redirecting back after Google login
+                        }
+                    });
+                    if (error) toast.error(error.message);
                 }
-            };
-            
-            // Other handlers (copy, paste) remain the same
-            const handleCopy = () => { if (!output) return; navigator.clipboard.writeText(output); toast.success("Copied!"); };
-            const handlePaste = async () => { try { setInput(await navigator.clipboard.readText()); toast.info("Pasted!"); } catch(err) { toast.error("Could not read clipboard."); }};
+                async function signOut() {
+                    await supabaseClient.auth.signOut();
+                    setUser(null);
+                    toast.info("You have been signed out.");
+                }
 
-            return e('div', { className: 'w-full min-h-screen main-gradient flex flex-col items-center justify-center p-4' },
-                
-                // User login/logout button at the top right
-                e('div', { className: 'absolute top-4 right-4' },
-                    user
-                    ? e('button', { onClick: signOut, className: 'bg-white/20 text-white text-sm font-semibold py-2 px-4 rounded-lg hover:bg-white/30 backdrop-blur-sm' }, `Logout ${user.email}`)
-                    : e('button', { onClick: signInWithGoogle, className: 'bg-white text-indigo-600 text-sm font-semibold py-2 px-4 rounded-lg hover:bg-gray-100' }, 'Login with Google')
-                ),
-                
-                e('div', { className: 'w-full max-w-2xl mx-auto' },
-                    e('div', { className: 'text-center mb-8' },
-                        e('h1', { className: 'text-5xl md:text-6xl font-extrabold text-white tracking-tight' }, 'SecretMoji'),
-                        e('p', { className: 'text-lg text-white/80 mt-2' }, 'Turn your secrets into a fun string of Emojis.')
-                    ),
-                    e('div', { className: 'card rounded-2xl shadow-2xl p-6 md:p-8 space-y-6' },
-                        e('div', { className: 'grid grid-cols-2 gap-2 bg-gray-200 rounded-lg p-1' },
-                            e('button', { onClick: () => { setMode('encrypt'); setInput(''); setOutput(''); }, className: `py-2 px-4 rounded-md text-sm font-semibold transition-all ${mode === 'encrypt' ? 'bg-white shadow' : 'text-gray-600'}` }, 'Encrypt'),
-                            e('button', { onClick: () => { setMode('decrypt'); setInput(''); setOutput(''); }, className: `py-2 px-4 rounded-md text-sm font-semibold transition-all ${mode === 'decrypt' ? 'bg-white shadow' : 'text-gray-600'}` }, 'Decrypt')
-                        ),
-                        e('div', { className: 'relative' },
-                            e('textarea', { value: input, onChange: e => setInput(e.target.value), placeholder: mode === 'encrypt' ? 'Type or paste your message...' : 'Paste the SecretMoji code...', className: 'w-full h-32 p-3 rounded-lg border-2 border-gray-200 focus:outline-none resize-none transition-all' }),
-                             e('button', { onClick: handlePaste, className: 'absolute bottom-2 right-2 bg-gray-100 hover:bg-gray-200 text-gray-600 text-xs font-semibold py-1 px-2 rounded' }, 'Paste')
-                        ),
-                        e('details', { className: 'group' },
-                            e('summary', { className: 'text-sm font-medium text-gray-600 cursor-pointer list-none flex items-center' }, e('span', null, 'Advanced Options'), e('span', { className: 'ml-1 group-open:rotate-90 transition-transform' }, '▶︎')),
-                             e('div', { className: 'mt-3 space-y-2' },
-                                e('input', { type: 'password', value: customKey, onChange: e => setCustomKey(e.target.value), placeholder: isSubscribed ? "Enter your private key (optional)" : "Login to use private keys", disabled: !isSubscribed, className: 'w-full p-2 rounded-lg border-2 border-gray-200 focus:outline-none transition-all disabled:bg-gray-100 disabled:cursor-not-allowed' }),
-                                !user && e('p', {className: 'text-xs text-indigo-600'}, 'Private Keys are a premium feature. Please log in to use them.')
-                            )
-                        ),
-                        e('button', { onClick: handleAction, className: 'w-full text-white font-bold py-3 px-4 rounded-lg transition-all transform hover:scale-105 main-gradient shadow-lg' }, mode === 'encrypt' ? 'Encrypt Now ✨' : 'Decrypt Now 🔑'),
-                        output && e('div', { className: 'relative' },
-                           e('textarea', { readOnly: true, value: output, className: 'w-full h-32 p-3 rounded-lg border-2 border-gray-200 bg-gray-50 resize-none' }),
-                           e('button', { onClick: handleCopy, className: 'absolute bottom-2 right-2 bg-indigo-500 hover:bg-indigo-600 text-white text-xs font-semibold py-1 px-2 rounded' }, 'Copy')
+                const handleAction = () => { const keyToUse = isSubscribed && customKey.trim() !== '' ? customKey.trim() : DEFAULT_KEY; if (!input) return; if (mode === 'encrypt') { const encrypted = encryptText(input, keyToUse); setOutput(encrypted); if (encrypted !== null) toast.success("Encryption complete!"); else toast.error("Encryption failed."); } else { const decrypted = decryptText(input, keyToUse); setOutput(decrypted); if (decrypted) toast.success("Decryption successful!"); else toast.error("Decryption failed. Invalid key or message."); } };
+                const handleCopy = () => { if (!output) return; navigator.clipboard.writeText(output); toast.success("Copied!"); };
+                const handlePaste = async () => { try { const text = await navigator.clipboard.readText(); setInput(text); toast.info("Pasted!"); } catch(err) { toast.error("Could not read clipboard."); }};
+
+                // The return part (the UI) is identical to before, just using 'e' for createElement
+                return e('div', { className: 'w-full min-h-screen main-gradient flex flex-col items-center justify-center p-4' },
+                    e('div', { className: 'absolute top-4 right-4' }, user ? e('button', { onClick: signOut, className: 'bg-white/20 text-white text-sm font-semibold py-2 px-4 rounded-lg hover:bg-white/30 backdrop-blur-sm' }, `Logout ${user.user_metadata?.full_name || user.email}`) : e('button', { onClick: signInWithGoogle, className: 'bg-white text-indigo-600 text-sm font-semibold py-2 px-4 rounded-lg hover:bg-gray-100' }, 'Login with Google')),
+                    e('div', { className: 'w-full max-w-2xl mx-auto' },
+                        e('div', { className: 'text-center mb-8' }, e('h1', { className: 'text-5xl md:text-6xl font-extrabold text-white tracking-tight' }, 'Emojrypt'), e('p', { className: 'text-lg text-white/80 mt-2' }, 'Turn your secrets into a fun string of Emojis.')),
+                        e('div', { className: 'card rounded-2xl shadow-2xl p-6 md:p-8 space-y-6' },
+                            e('div', { className: 'grid grid-cols-2 gap-2 bg-gray-200 rounded-lg p-1' }, e('button', { onClick: () => { setMode('encrypt'); setInput(''); setOutput(''); }, className: `py-2 px-4 rounded-md text-sm font-semibold transition-all ${mode === 'encrypt' ? 'bg-white shadow' : 'text-gray-600'}` }, 'Encrypt'), e('button', { onClick: () => { setMode('decrypt'); setInput(''); setOutput(''); }, className: `py-2 px-4 rounded-md text-sm font-semibold transition-all ${mode === 'decrypt' ? 'bg-white shadow' : 'text-gray-600'}` }, 'Decrypt')),
+                            e('div', { className: 'relative' }, e('textarea', { value: input, onChange: e => setInput(e.target.value), placeholder: mode === 'encrypt' ? 'Type or paste your message...' : 'Paste the Emojrypt code...', className: 'w-full h-32 p-3 rounded-lg border-2 border-gray-200 focus:outline-none resize-none transition-all' }), e('button', { onClick: handlePaste, className: 'absolute bottom-2 right-2 bg-gray-100 hover:bg-gray-200 text-gray-600 text-xs font-semibold py-1 px-2 rounded' }, 'Paste')),
+                            e('details', { className: 'group' }, e('summary', { className: 'text-sm font-medium text-gray-600 cursor-pointer list-none flex items-center' }, e('span', null, 'Advanced Options'), e('span', { className: 'ml-1 group-open:rotate-90 transition-transform' }, '▶︎')), e('div', { className: 'mt-3 space-y-2' }, e('input', { type: 'password', value: customKey, onChange: e => setCustomKey(e.target.value), placeholder: isSubscribed ? "Enter your private key (optional)" : "Login to use private keys", disabled: !isSubscribed, className: 'w-full p-2 rounded-lg border-2 border-gray-200 focus:outline-none transition-all disabled:bg-gray-100 disabled:cursor-not-allowed' }), !user && e('p', {className: 'text-xs text-indigo-600'}, 'Private Keys are a premium feature. Please log in to use them.'))),
+                            e('button', { onClick: handleAction, className: 'w-full text-white font-bold py-3 px-4 rounded-lg transition-all transform hover:scale-105 main-gradient shadow-lg' }, mode === 'encrypt' ? 'Encrypt Now ✨' : 'Decrypt Now 🔑'),
+                            output && e('div', { className: 'relative' }, e('textarea', { readOnly: true, value: output, className: 'w-full h-32 p-3 rounded-lg border-2 border-gray-200 bg-gray-50 resize-none' }), e('button', { onClick: handleCopy, className: 'absolute bottom-2 right-2 bg-indigo-500 hover:bg-indigo-600 text-white text-xs font-semibold py-1 px-2 rounded' }, 'Copy'))
                         )
-                    )
-                )
-            ),
-            e(Toaster, { richColors: true, position: 'top-right' })
-        );
-        };
-        
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(e(App));
+                    ),
+                    e(Toaster, { richColors: true, position: 'top-right' })
+                );
+            }
+            
+            // This is where we kick off the React app
+            const root = ReactDOM.createRoot(document.getElementById('root'));
+            root.render(e(App));
+        })(); // Immediately invoke the function
     </script>
 </body>
 </html>
